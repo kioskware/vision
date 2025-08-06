@@ -27,4 +27,22 @@ class ProcessingResults internal constructor(
         return results[processor] as? T
     }
 
+    /**
+     * Retrieves all results as a list.
+     * @return A list of all results from the processing operations.
+     */
+    fun getAll(): List<Pair<ImageProcessor<*>, Any?>> {
+        return results.entries.map { entry ->
+            Pair(entry.key, entry.value)
+        }
+    }
+
+    /**
+     * Retrieves all results as a list of values.
+     * @return A list of all values from the processing operations.
+     */
+    fun getAllValues(): List<Any?> {
+        return results.values.toList()
+    }
+
 }
