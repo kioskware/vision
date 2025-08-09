@@ -1,5 +1,6 @@
 package kioskware.vision.processor
 
+import android.graphics.Bitmap
 import android.graphics.Canvas
 import android.media.Image
 
@@ -24,20 +25,17 @@ abstract class ImageProcessor<T> {
 
     /**
      * Processes the given image and optionally draws visualisation on the provided canvas.
-     * @param image The image to be processed.
-     * @param rotationDegrees The rotation degrees of the image.
+     * @param image The image bitmap to be processed. Rotation is handled by the caller, so `rotationDegrees` are always 0.
      * @param overlayCanvas An optional [android.graphics.Canvas] to draw visualisation on top of the image.
      * If `visualisationEnabled` is false, this will be null.
      */
     suspend fun process(
-        image: Image,
-        rotationDegrees: Int,
+        image: Bitmap,
         overlayCanvas: Canvas? = null
     ) : T? {
         if (enabled) {
             return onProcess(
                 image,
-                rotationDegrees,
                 if (visualisationEnabled) overlayCanvas else null
             )
         }
@@ -54,14 +52,12 @@ abstract class ImageProcessor<T> {
 
     /**
      * Actual processing logic for the image.
-     * @param image The image to be processed.
-     * @param rotationDegrees The rotation degrees of the image.
+     * @param image The image bitmap to be processed. Rotation is handled by the caller, so `rotationDegrees` are always 0.
      * @param overlayCanvas An optional [Canvas] to draw additional information on top of the image.
      * Implementation should draw visualisation of analysis or other processing on this canvas if provided.
      */
     protected abstract suspend fun onProcess(
-        image: Image,
-        rotationDegrees: Int,
+        image: Bitmap,
         overlayCanvas: Canvas? = null
     ) : T
 

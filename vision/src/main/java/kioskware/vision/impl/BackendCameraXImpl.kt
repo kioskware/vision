@@ -141,14 +141,12 @@ class BackendCameraXImpl(
                 val processingStartNanos = System.nanoTime()
                 try {
                     val snapConfig = cameraSnapshotConfig.value
-                    val image = imageProxy.image ?: return@setAnalyzer
-
                     // Bitmap for rendering camera image
-                    var contentBitmap: Bitmap = if (snapConfig.cameraViewEnabled) {
+                    var contentBitmap: Bitmap = try {
                         imageProxy.toBitmap()
-                    } else {
-                        // If camera view is disabled, create an empty bitmap
-                        createBitmap(image.width, image.height)
+                    } catch (e: Exception) {
+                        Log.e("BackendCameraXImpl", "Failed to convert ImageProxy to Bitmap", e)
+                        return@setAnalyzer
                     }
                     // Convert ImageProxy to Bitmap
                     val rotationDegrees = imageProxy.imageInfo.rotationDegrees
@@ -171,7 +169,7 @@ class BackendCameraXImpl(
                             async {
                                 val canvas = overlayBitmap?.let { Canvas(it) }
                                 // Process the image with each ImageProcessor
-                                processor.process(image, rotationDegrees, canvas).also {
+                                processor.process(contentBitmap, canvas).also {
                                     processingResultsMap[processor] = it
                                 }
                             }
@@ -181,7 +179,7 @@ class BackendCameraXImpl(
                     // Send snapshot with processed results
                     _cameraSnapshot.value = CameraSnapshot(
                         cameraParams = cameraParams.value,
-                        contentBitmap = contentBitmap,
+                        contentBitmap = if(snapConfig.cameraViewEnabled) contentBitmap else null,
                         overlayBitmap = overlayBitmap,
                         processingResults = ProcessingResults(processingResultsMap),
                         processingDuration = (System.nanoTime() - processingStartNanos),
@@ -256,6 +254,16 @@ class BackendCameraXImpl(
             val currentConfig = when (val state = _cameraState.value) {
                 is CameraState.Configured -> state.config
                 else -> null
+            }
+            currentConfig?.let {
+                for (processor in it.imageProcessors) {
+                    // Cancel all processing jobs for each processor
+                    try {
+                        processor.release()
+                    } catch (e: Exception) {
+                        // Ignore errors during release
+                    }
+                }
             }
             if (currentConfig != null) {
                 _cameraState.value = CameraState.Stopping(currentConfig)
